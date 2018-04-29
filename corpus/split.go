@@ -38,6 +38,8 @@ func Split(r io.Reader, train_w, test_w io.Writer, rate int) (err error) {
 		if i%rate == 0 {
 			// 产生中奖号码
 			luck = rand.Intn(rate)
+			train_writer.Flush()
+			test_writer.Flush()
 		}
 		if i%rate == luck {
 			// 写入测试集
@@ -54,5 +56,7 @@ func Split(r io.Reader, train_w, test_w io.Writer, rate int) (err error) {
 		i++
 	}
 
+	train_writer.Flush()
+	test_writer.Flush()
 	return
 }
