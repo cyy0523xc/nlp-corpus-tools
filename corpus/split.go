@@ -9,8 +9,7 @@ import (
 
 func Split(r io.Reader, train_w, test_w io.Writer, rate int) (err error) {
 	// 获取字段名
-	reader := csv.NewReader(r)
-	header, err := reader.Read()
+	reader, header, err := common.CsvReader(r)
 	if err != nil {
 		return err
 	}

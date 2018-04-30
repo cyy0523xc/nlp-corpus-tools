@@ -76,6 +76,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&rootParams.infile, "infile", "i", "", "输入的语料库文件")
 	rootCmd.PersistentFlags().StringVarP(&rootParams.outfile, "outfile", "o", "", "输出的保存文件")
 
+	rootCmd.PersistentFlags().IntVar(&common.Skip, "skip", 0, "读取csv时跳过前面若干行记录")
+	rootCmd.PersistentFlags().IntVar(&common.Limit, "limit", 0, "读取csv时限制只读取若干行记录")
+
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
