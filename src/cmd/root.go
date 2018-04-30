@@ -19,14 +19,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cyy0523xc/nlp-corpus-tools/common"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 type RootParams struct {
-	infile string
-	action string
+	infile  string
+	outfile string
+	action  string
 }
 
 var (
@@ -42,8 +44,11 @@ var rootCmd = &cobra.Command{
 
 支持csv文件格式的语料库的字段处理，值处理，拆分合并等常用操作。
 
-for help:
+For help:
     nlp-corpus-tools --help
+
+说明：
+1. 除非有特殊说明，否则都支持语料库文件内容的管道输入和输出
 `,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
@@ -59,18 +64,17 @@ func Execute() {
 	}
 }
 
-func addActionFlag(supportActions []string) {
-	rootCmd.PersistentFlags().StringVarP(&rootParams.action, "action", "a", "", "支持的子命令，支持的值："+strings.Join(supportActions, ", "))
-}
-
 func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.src.yaml)")
+	rootCmd.PersistentFlags().BoolVar(&common.Debug, "debug", false, "全局测试状态")
+
+	//rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.src.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&rootParams.infile, "infile", "i", "", "输入的语料库文件")
+	rootCmd.PersistentFlags().StringVarP(&rootParams.outfile, "outfile", "o", "", "输出的保存文件")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -100,5 +104,33 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+}
+
+// getInput 获取输入的io
+func (p RootParams) getInput() (*os.File, error) {
+	if p.infile != "" {
+		return os.Open(p.infile)
+	} else {
+		return os.Stdin, nil
+	}
+}
+
+// getOutput 获取输出的io
+func (p RootParams) getOutput() (*os.File, error) {
+	if p.outfile != "" {
+		return os.Create(p.outfile)
+	} else {
+		return os.Stdout, nil
+	}
+}
+
+func addActionFlag(supportActions []string) {
+	rootCmd.PersistentFlags().StringVarP(&rootParams.action, "action", "a", "", "支持的子命令，支持的值："+strings.Join(supportActions, ", "))
+}
+
+func (p RootParams) checkAction(actions []string) {
+	if !common.StringIn(p.action, actions) {
+		panic("不支持该action参数值")
 	}
 }

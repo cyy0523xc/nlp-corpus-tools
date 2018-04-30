@@ -15,9 +15,10 @@
 package cmd
 
 import (
+	"fmt"
+	"io"
 	"os"
 
-	"github.com/cyy0523xc/nlp-corpus-tools/common"
 	"github.com/cyy0523xc/nlp-corpus-tools/corpus"
 	"github.com/spf13/cobra"
 )
@@ -28,7 +29,7 @@ type CorpusParams struct {
 }
 
 var corpusParams CorpusParams
-var corpusActions = []string{"batch", "merge", "split"}
+var corpusActions = []string{"batch", "merge", "split", "count-records"}
 
 // corpusCmd represents the corpus command
 var corpusCmd = &cobra.Command{
@@ -42,41 +43,37 @@ For example:
 支持的功能如下：
 - [ ] batch: 把一个大文件分拆成小的批量文件，可以方便进行标注
 - [ ] merge: 例如将一个若干小的批量文件合并成大文件，例如训练集
-- [ ] split: 将文件按比例拆分成训练集和测试集
-- [ ] stat: 统计csv文件的记录数（注意不是文件的行数）
+- [x] split: 将文件按比例拆分成训练集和测试集
+- [x] count-records: 统计csv文件的记录数（注意不是文件的行数）
 `,
 	Example: `
-1. 将文件按比例拆分成训练集和测试集:
+1. 统计语料库文件的记录数
 
-    nlp-corpus-tools corpus -a split -i source_corpus.csv --rate=0.8
+    nlp-corpus-tools corpus -a count-records -i test.csv
+	cat test.csv|nlp-corpus-tools corpus -a count-records
+
+2. 将文件按比例拆分成训练集和测试集:
+
+    nlp-corpus-tools corpus -a split -i test.csv --rate=0.8 --train-file=train.out --test-file=test.out
+    cat test.csv|nlp-corpus-tools corpus -a split --rate=0.8 --train-file=train.out --test-file=test.out
 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		if !common.StringIn(rootParams.action, corpusActions) {
-			panic("不支持该action参数值")
-		}
+		rootParams.checkAction(corpusActions)
 
-		r, err := os.Open(rootParams.infile)
+		r, err := rootParams.getInput()
 		if err != nil {
 			panic(err)
 		}
 		defer r.Close()
 
-		trainF, err := os.Create(corpusParams.trainFile)
-		if err != nil {
-			panic(err)
+		switch rootParams.action {
+		case "split":
+			corpusParams.split(r)
+		case "count-records":
+			corpusParams.countRecords(r)
 		}
-		defer trainF.Close()
 
-		testF, err := os.Create(corpusParams.testFile)
-		if err != nil {
-			panic(err)
-		}
-		defer testF.Close()
-
-		if err = corpus.Split(r, trainF, testF, corpusParams.rate); err != nil {
-			panic(err)
-		}
 	},
 }
 
@@ -96,4 +93,29 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// corpusCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+func (p CorpusParams) countRecords(r io.Reader) {
+	if n, err := corpus.CountRecords(r); err != nil {
+		panic(err)
+	} else {
+		fmt.Printf("总记录数：%d\n", n)
+	}
+}
+
+func (p CorpusParams) split(r io.Reader) {
+	trainF, err := os.Create(corpusParams.trainFile)
+	if err != nil {
+		panic(err)
+	}
+	defer trainF.Close()
+
+	testF, err := os.Create(corpusParams.testFile)
+	if err != nil {
+		panic(err)
+	}
+	defer testF.Close()
+
+	if err = corpus.Split(r, trainF, testF, corpusParams.rate); err != nil {
+		panic(err)
+	}
 }
