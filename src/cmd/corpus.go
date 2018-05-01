@@ -33,7 +33,7 @@ type CorpusParams struct {
 }
 
 var corpusParams CorpusParams
-var corpusActions = []string{"batch", "merge", "split", "count-records"}
+var corpusActions = []string{"batch", "merge", "split", "stat"}
 
 // corpusCmd represents the corpus command
 var corpusCmd = &cobra.Command{
@@ -48,13 +48,13 @@ For example:
 - [x] batch: 把一个大文件分拆成小的批量文件，可以方便进行标注。如果文件很大，还支持按比例抽取
 - [x] merge: 例如将一个若干小的批量文件合并成大文件，例如训练集
 - [x] split: 将文件按比例拆分成训练集和测试集
-- [x] count-records: 统计csv文件的记录数（注意不是文件的行数）
+- [x] stat: 统计csv文件的记录数, 字段数，计算文件编码等
 `,
 	Example: `
 1. 统计语料库文件的记录数
 
-    nlp-corpus-tools corpus -a count-records -i test.csv
-	cat test.csv|nlp-corpus-tools corpus -a count-records
+    nlp-corpus-tools corpus -a stat -i test.csv
+	cat test.csv|nlp-corpus-tools corpus -a stat
 
 2. 将文件按比例拆分成训练集和测试集，抽取1/4的样本数量作为测试集:
 
@@ -79,8 +79,8 @@ For example:
 		defer r.Close()
 
 		switch rootParams.action {
-		case "count-records":
-			corpusParams.countRecords(r)
+		case "stat":
+			corpusParams.stat(r)
 		case "split":
 			if corpusParams.rate < 1 {
 				panic("rate参数错误，该值不能小于1")
@@ -133,8 +133,8 @@ func init() {
 	// corpusCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func (p CorpusParams) countRecords(r io.Reader) {
-	if n, err := corpus.CountRecords(r); err != nil {
+func (p CorpusParams) stat(r io.Reader) {
+	if n, err := corpus.Stat(r); err != nil {
 		panic(err)
 	} else {
 		fmt.Printf("总记录数：%d\n", n)
