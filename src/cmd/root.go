@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/cyy0523xc/nlp-corpus-tools/common"
 	homedir "github.com/mitchellh/go-homedir"
@@ -79,9 +78,11 @@ func init() {
 	rootCmd.PersistentFlags().IntVar(&common.Skip, "skip", 0, "读取csv时跳过前面若干行记录")
 	rootCmd.PersistentFlags().IntVar(&common.Limit, "limit", 0, "读取csv时限制只读取若干行记录")
 
+	rootCmd.PersistentFlags().StringVarP(&rootParams.action, "action", "a", "", "支持的子命令，每个命令支持的子命令是不一样的")
+
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -126,10 +127,6 @@ func (p RootParams) getOutput() (*os.File, error) {
 	} else {
 		return os.Stdout, nil
 	}
-}
-
-func addActionFlag(supportActions []string) {
-	rootCmd.PersistentFlags().StringVarP(&rootParams.action, "action", "a", "", "支持的子命令，支持的值："+strings.Join(supportActions, ", "))
 }
 
 func (p RootParams) checkAction(actions []string) {

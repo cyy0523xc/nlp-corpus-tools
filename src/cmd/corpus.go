@@ -114,7 +114,6 @@ For example:
 
 func init() {
 	rootCmd.AddCommand(corpusCmd)
-	addActionFlag(corpusActions)
 
 	// Here you will define your flags and configuration settings.
 
