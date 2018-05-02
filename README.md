@@ -11,12 +11,12 @@ NLP语料库处理工具
   - [x] keep: 只保留若干字段
   - [ ] 
 - [ ] text: 文本操作相关
-  - [ ] replace: 字符串替换
-  - [ ] filter-space: 过滤掉文本中的空格，制表符等
-  - [ ] filter-newline-char: 过滤掉文本中的换行符
-  - [ ] iconv: 编码转换
-  - [ ] toDBC: 全角转半角
-  - [ ] trim: 替换字符串前后的空格字符
+  - [x] replace: 字符串替换
+  - [x] filter-space: 过滤掉文本中的空格，制表符等
+  - [x] filter-newline-char: 过滤掉文本中的换行符
+  - [x] iconv: 编码转换
+  - [x] dbc2sbc: 全角转半角
+  - [x] trim: 替换字符串前后的空格字符
 - [ ] filter: 过滤，例如满足某些条件的文本应该去掉
   - [ ] length: 按字符串的长度进行过滤
   - [ ] null: 过滤掉空字符串的记录
