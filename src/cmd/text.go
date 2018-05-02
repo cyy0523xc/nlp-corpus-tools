@@ -68,6 +68,11 @@ For example:
     nlp-corpus-tools text -a replace -i test.csv --old="友邻茉莉花开" --new="hello"
 	cat test.csv|nlp-corpus-tools text -a replace --old="友邻茉莉花开" --new="hello"
 
+3. 去掉前后的空格字符：
+
+    nlp-corpus-tools text -a trim -i test.csv 
+	cat test.csv|nlp-corpus-tools text -a trim
+
 `,
 
 	Run: func(cmd *cobra.Command, args []string) {
@@ -89,9 +94,31 @@ For example:
 			fmt.Printf("text params: %+v\n", textParams)
 		}
 
+		switch rootParams.action {
+		case "iconv":
+			textParams.From = strings.ToLower(textParams.From)
+			textParams.To = strings.ToLower(textParams.To)
+			if !common.StringIn(textParams.From, common.Charsets) {
+				panic("from参数不支持")
+			}
+			if !common.StringIn(textParams.To, common.Charsets) {
+				panic("to参数不支持")
+			}
+			if textParams.From == textParams.To {
+				panic("from和to参数应该相同")
+			}
+			if textParams.From != common.UTF8 && textParams.To != common.UTF8 {
+				panic("from或者to参数至少需要一个为：" + common.UTF8)
+			}
+		}
+
 		funcMap := map[string]func(string) (string, error){
-			"replace": TextReplace,
-			"dbc2sbc": TextDBC2SBC,
+			"replace":             TextReplace,
+			"filter-space":        TextFilterSpace,
+			"filter-newline_char": TextFilterNewlineChar,
+			"dbc2sbc":             TextDBC2SBC,
+			"iconv":               TextIconv,
+			"trim":                TextTrim,
 		}
 		if err = text.Transform(r, w, textParams.Fieldnames, funcMap[rootParams.action]); err != nil {
 			panic(err)
@@ -102,23 +129,15 @@ For example:
 func init() {
 	rootCmd.AddCommand(textCmd)
 
-	// Here you will define your flags and configuration settings.
+	textCmd.PersistentFlags().StringArrayVar(&textParams.Fieldnames, "fields", []string{}, "指定转换的字段名，默认对全部的字段进行处理")
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	textCmd.PersistentFlags().StringVar(&textParams.From, "from", "gbk", "转换前的编码")
-	textCmd.PersistentFlags().StringVar(&textParams.To, "to", "utf8", "转换后的编码")
+	textCmd.PersistentFlags().StringVar(&textParams.From, "from", "gbk", "转换前的编码，可以取值："+strings.Join(common.Charsets, ", "))
+	textCmd.PersistentFlags().StringVar(&textParams.To, "to", "utf8", "转换后的编码，可以取值："+strings.Join(common.Charsets, ", "))
 
 	textCmd.PersistentFlags().StringVar(&textParams.Old, "old", "", "被替换的字符串")
 	textCmd.PersistentFlags().StringVar(&textParams.New, "new", "", "新字符串")
 
 	textCmd.PersistentFlags().StringVar(&textParams.Cutset, "cutset", "", "trim需要被替换的字符串")
-
-	textCmd.PersistentFlags().StringArrayVar(&textParams.Fieldnames, "fields", []string{}, "需要转换的字段名，默认为全部")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// textCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func TextReplace(str string) (string, error) {
@@ -137,14 +156,16 @@ func TextFilterNewlineChar(str string) (string, error) {
 
 func TextTrim(str string) (string, error) {
 	if textParams.Cutset != "" {
-		return strings.Trim(str, textParams.Cutset)
+		return strings.Trim(str, textParams.Cutset), nil
 	}
-	return strings.TrimSpace(str)
+	return strings.TrimSpace(str), nil
 }
 
 func TextIconv(str string) (string, error) {
-
-	return str, nil
+	if textParams.From == common.UTF8 {
+		return common.UTF8_GB(str)
+	}
+	return common.GB_UTF8(str)
 }
 
 func TextDBC2SBC(str string) (string, error) {

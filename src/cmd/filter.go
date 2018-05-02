@@ -16,35 +16,138 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/cyy0523xc/nlp-corpus-tools/common"
+	"github.com/cyy0523xc/nlp-corpus-tools/filter"
 	"github.com/spf13/cobra"
 )
 
-// filterCmd represents the filter command
+type FilterParams struct {
+	Fieldnames []string
+
+	// in
+	Ins []string
+
+	// length
+	Op     string
+	Length int
+}
+
+var filterParams FilterParams
+var filterActions = []string{"length", "null", "in"}
+var supportOps = []string{"<", "<=", ">", ">=", "==", "!="}
+
+// filterCmd represents the text command
 var filterCmd = &cobra.Command{
 	Use:   "filter",
-	Short: "语料库数据集的过滤功能",
-	Long: `按照某种规则对语料库进行过滤的功能，例如将文本长度小于某个值的过滤掉。
+	Short: "对文本的操作",
+	Long: `对需要进行nlp处理的文本进行操作，例如编码转化，全角半角转换，字符串替换等。
 For example:
 
     nlp-corpus-tools filter --help
 
+支持以下功能:
+- [x] length: 按字符串的长度进行过滤
+- [x] null: 过滤掉空字符串的记录
+- [x] in: 如果字段值等于某些值，则过滤
 `,
+	Example: `
+1. 过滤掉字段值为空的记录:
+
+    nlp-corpus-tools filter -a null -i test.csv --fields=content
+	cat test.csv|nlp-corpus-tools filter -a null --fields=content
+
+2. 过滤某些值的记录：
+
+    nlp-corpus-tools filter -a in -i test.csv --fields=content --in=无 --in=沥林
+	cat test.csv|nlp-corpus-tools filter -a in --fields=content --in=无 --in=沥林
+
+3. 过滤长度小于3的记录：
+
+    nlp-corpus-tools filter -a length -i test.csv --fields=content --length=3 --op="<"
+	cat test.csv|nlp-corpus-tools filter -a length --fields=content --length=3 --op="<"
+
+`,
+
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("filter called")
+		rootParams.checkAction(filterActions)
+
+		r, err := rootParams.getInput()
+		if err != nil {
+			panic(err)
+		}
+		defer r.Close()
+
+		w, err := rootParams.getOutput()
+		if err != nil {
+			panic(err)
+		}
+		defer w.Close()
+
+		if common.Debug {
+			fmt.Printf("filter params: %+v\n", filterParams)
+		}
+
+		switch rootParams.action {
+		case "length":
+			if !common.StringIn(filterParams.Op, supportOps) {
+				panic("op参数错误")
+			}
+			if filterParams.Length < 0 {
+				panic("length参数错误")
+			}
+		case "in":
+			if len(filterParams.Ins) < 1 {
+				panic("in参数错误")
+			}
+		}
+
+		funcMap := map[string]func(string) bool{
+			"length": FilterLength,
+			"null":   FilterNull,
+			"in":     FilterIn,
+		}
+		if err = filter.Filter(r, w, filterParams.Fieldnames, funcMap[rootParams.action]); err != nil {
+			panic(err)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(filterCmd)
 
-	// Here you will define your flags and configuration settings.
+	filterCmd.PersistentFlags().StringArrayVar(&filterParams.Fieldnames, "fields", []string{}, "指定转换的字段名，默认对全部的字段进行处理")
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// filterCmd.PersistentFlags().String("foo", "", "A help for foo")
+	filterCmd.PersistentFlags().StringArrayVar(&filterParams.Ins, "in", []string{}, "指定需要进行过滤的值")
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// filterCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	filterCmd.PersistentFlags().StringVar(&filterParams.Op, "op", "", "比较操作符，例如长度小于某个值的时候过滤，则可以设置op=\"<\"。支持的操作符："+strings.Join(supportOps, ", "))
+	filterCmd.PersistentFlags().IntVar(&filterParams.Length, "length", 0, "比较的文本长度")
+}
+
+func FilterIn(s string) bool {
+	return common.StringIn(s, filterParams.Ins)
+}
+
+func FilterNull(s string) bool {
+	return s == ""
+}
+
+func FilterLength(s string) bool {
+	l := len([]rune(s))
+	switch filterParams.Op {
+	case ">":
+		return l > filterParams.Length
+	case ">=":
+		return l >= filterParams.Length
+	case "<":
+		return l < filterParams.Length
+	case "<=":
+		return l <= filterParams.Length
+	case "==":
+		return l == filterParams.Length
+	case "!=":
+		return l != filterParams.Length
+	}
+	return false
 }

@@ -13,12 +13,14 @@ import (
 
 const (
 	GBK     = "gbk"
+	UTF8    = "utf8"
 	GB18030 = "gb18030"
 )
 
 var (
 	// 默认为gbk编码
 	chineseGB = simplifiedchinese.GBK
+	Charsets  = []string{GBK, GB18030, UTF8}
 )
 
 // IsUTF8 判断是否为utf8编码
